@@ -27,7 +27,6 @@ const screens = {
 function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));
   (screens[name] || screens.join).classList.add('active');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
