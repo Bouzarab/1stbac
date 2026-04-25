@@ -3,105 +3,133 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teacher - 1st Bac Exam Live</title>
+  <title>Teacher — 1st Bac Exam</title>
   <link rel="stylesheet" href="/exam1bac.css">
 </head>
 <body>
   <main class="app-shell">
+
+    <!-- ── Topbar ────────────────────────────────────────────────────────── -->
     <header class="topbar">
       <div class="brand">
         <h1>1st Bac Exam Live</h1>
-        <p>Teacher control room</p>
+        <p>Teacher Control Room</p>
       </div>
       <div class="top-actions">
-        <a class="btn ghost" href="/exam1bac-student.html" target="_blank" rel="noreferrer">Open student page</a>
-        <button class="btn danger" id="end-quiz-btn">End quiz</button>
+        <a class="btn ghost" href="/exam1bac-student.html" target="_blank" rel="noreferrer">Open student page ↗</a>
+        <button class="btn danger" id="end-quiz-btn">End quiz now</button>
       </div>
     </header>
 
+    <!-- ══════════════════════════ LOBBY ════════════════════════════════════ -->
     <section class="screen active" id="screen-lobby">
       <div class="layout">
-        <div class="panel">
-          <h2 class="panel-title">Lobby</h2>
-          <div class="stat-grid">
-            <div class="stat">
-              <span class="value" id="active-count">0</span>
-              <span class="label">Active students</span>
+
+        <div>
+          <div class="panel">
+            <h2 class="panel-title">Lobby</h2>
+
+            <div class="stat-grid">
+              <div class="stat">
+                <span class="value" id="active-count">0</span>
+                <span class="label">Students ready</span>
+              </div>
+              <div class="stat">
+                <span class="value" id="removed-count">0</span>
+                <span class="label">Removed</span>
+              </div>
+              <div class="stat">
+                <span class="value">24</span>
+                <span class="label">Questions</span>
+              </div>
             </div>
-            <div class="stat">
-              <span class="value" id="removed-count">0</span>
-              <span class="label">Removed</span>
+
+            <p class="muted" style="font-size:0.9rem;margin-bottom:16px;">
+              Share the student page link below. Students enter their name, number and class before you start.
+            </p>
+
+            <div class="link-box">
+              <span id="student-link">Loading link…</span>
+              <button class="btn ghost" id="copy-link-btn" style="min-height:32px;padding:4px 10px;font-size:0.8rem;">Copy</button>
             </div>
-            <div class="stat">
-              <span class="value" id="total-count">24</span>
-              <span class="label">Questions</span>
+
+            <div class="button-row">
+              <button class="btn primary lg" id="start-btn" disabled>Start Quiz</button>
+              <button class="btn ghost" id="restart-btn">Reset &amp; clear lobby</button>
             </div>
-          </div>
-          <p class="muted">Share the student page link. Students enter their names here before you start.</p>
-          <div class="button-row">
-            <button class="btn primary" id="start-btn" disabled>Start quiz</button>
-            <button class="btn ghost" id="restart-btn">Reset lobby</button>
           </div>
         </div>
 
         <aside>
           <div class="panel">
-            <h2 class="panel-title">Students</h2>
-            <div class="student-list" id="student-list"></div>
+            <h2 class="panel-title">Students in lobby</h2>
+            <div class="student-list" id="lobby-student-list"></div>
           </div>
           <div class="panel">
-            <h2 class="panel-title">Removed students</h2>
-            <div class="student-list" id="removed-list"></div>
+            <h2 class="panel-title">Removed</h2>
+            <div class="student-list" id="lobby-removed-list"></div>
           </div>
         </aside>
       </div>
     </section>
 
+    <!-- ════════════════════════ QUESTION ═══════════════════════════════════ -->
     <section class="screen" id="screen-question">
       <div class="layout">
+
         <div class="panel question-card">
           <div class="question-head">
             <div class="question-meta">
-              <span class="tag" id="question-number">Question 1 of 24</span>
-              <span class="tag" id="question-section">Section</span>
-              <span class="tag" id="question-points">10 points</span>
+              <span class="tag" id="question-number">Q1 / 24</span>
+              <span class="tag blue" id="question-section">Section</span>
             </div>
             <div class="timer-wrap">
               <div class="timer-number" id="timer-number">0:40</div>
-              <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+              <div class="timer-bar-wrap">
+                <div class="timer-fill" id="timer-fill"></div>
+              </div>
             </div>
           </div>
 
           <div class="passage hidden" id="question-passage"></div>
+
           <div class="emotion-image-frame hidden" id="question-image-frame">
             <img id="question-image" alt="">
           </div>
+
           <h2 class="prompt" id="question-prompt"></h2>
           <div class="options" id="question-options"></div>
         </div>
 
         <aside>
           <div class="panel">
-            <h2 class="panel-title">Live progress</h2>
+            <h2 class="panel-title">Live Progress</h2>
+
             <div class="stat-grid">
               <div class="stat">
                 <span class="value" id="answer-count">0</span>
-                <span class="label">Answers</span>
+                <span class="label">Answered</span>
               </div>
               <div class="stat">
                 <span class="value" id="answer-total">0</span>
                 <span class="label">Active</span>
               </div>
               <div class="stat">
-                <span class="value" id="question-time-kind">40s</span>
-                <span class="label">Timer</span>
+                <span class="value" id="answer-pct">0%</span>
+                <span class="label">Done</span>
               </div>
             </div>
+
+            <div class="progress-bar-wrap">
+              <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+            </div>
+
             <div class="button-row">
-              <button class="btn primary" id="move-next-btn">Move to next question</button>
-              <button class="btn secondary" id="show-results-btn">Show results now</button>
+              <button class="btn primary" id="move-next-btn">Next question →</button>
+              <button class="btn danger" id="show-results-btn">Show results &amp; end quiz</button>
             </div>
           </div>
+
           <div class="panel">
             <h2 class="panel-title">Students</h2>
             <div class="student-list" id="question-student-list"></div>
@@ -110,13 +138,16 @@
       </div>
     </section>
 
+    <!-- ════════════════════════ RESULTS ════════════════════════════════════ -->
     <section class="screen" id="screen-results">
       <div class="layout">
+
         <div>
           <div class="panel">
-            <h2 class="panel-title">Question results</h2>
-            <div class="result-strip" id="correct-answer"></div>
-            <div class="stat-grid">
+            <h2 class="panel-title">Question Result</h2>
+            <div class="result-strip correct" id="correct-answer-strip">—</div>
+
+            <div class="stat-grid" style="margin-top:14px;">
               <div class="stat">
                 <span class="value" id="correct-count">0</span>
                 <span class="label">Correct</span>
@@ -130,20 +161,23 @@
                 <span class="label">No answer</span>
               </div>
             </div>
+
             <div class="button-row">
-              <button class="btn primary" id="results-next-btn">Next question</button>
-              <button class="btn secondary" id="leaderboard-btn">Show leaderboard</button>
+              <button class="btn primary" id="results-next-btn">Next question →</button>
+              <button class="btn ghost" id="leaderboard-btn">Show leaderboard</button>
+              <button class="btn danger" id="results-end-btn">End quiz</button>
             </div>
           </div>
         </div>
 
         <aside class="panel">
-          <h2 class="panel-title">Current standings</h2>
+          <h2 class="panel-title">Current Standings</h2>
           <div class="leaderboard-list" id="results-leaderboard"></div>
         </aside>
       </div>
     </section>
 
+    <!-- ═══════════════════════ LEADERBOARD ═════════════════════════════════ -->
     <section class="screen" id="screen-leaderboard">
       <div class="layout">
         <div class="panel">
@@ -151,24 +185,40 @@
           <div class="leaderboard-list" id="leaderboard-list"></div>
         </div>
         <aside class="panel">
-          <h2 class="panel-title">Controls</h2>
-          <div class="button-row">
-            <button class="btn primary" id="leaderboard-next-btn">Next question</button>
+          <h2 class="panel-title">Continue</h2>
+          <div class="button-row" style="margin-top:0;">
+            <button class="btn primary" id="leaderboard-next-btn">Next question →</button>
+            <button class="btn danger" id="leaderboard-end-btn">End quiz</button>
           </div>
         </aside>
       </div>
     </section>
 
+    <!-- ════════════════════════ FINISHED ═══════════════════════════════════ -->
     <section class="screen" id="screen-finished">
-      <div class="panel">
-        <h2 class="panel-title">Quiz complete</h2>
-        <p class="muted">Final scores are below. Removed students keep the points they earned before removal.</p>
-        <div class="leaderboard-list" id="final-leaderboard"></div>
-        <div class="button-row" style="margin-top: 14px;">
-          <button class="btn primary" id="final-restart-btn">Start a new run</button>
+      <div class="panel" style="max-width:860px;">
+        <h2 class="panel-title" style="font-size:1.2rem;">Quiz Complete 🎉</h2>
+
+        <p class="muted" style="margin-bottom:20px;font-size:0.92rem;">
+          Final results are below. Download the Excel file for a full record of each student's answers.
+        </p>
+
+        <div class="button-row" style="margin-bottom:24px;margin-top:0;">
+          <a class="download-btn" href="/exam1bac/export-results" download="quiz-results.xlsx">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download Results (Excel)
+          </a>
+          <button class="btn ghost" id="final-restart-btn">Start a new quiz</button>
         </div>
+
+        <div class="leaderboard-list" id="final-leaderboard"></div>
       </div>
     </section>
+
   </main>
 
   <script src="/socket.io/socket.io.js"></script>

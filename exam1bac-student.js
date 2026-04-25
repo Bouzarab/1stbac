@@ -1,18 +1,12 @@
 const socket = io();
 
-const screens = {
-  join: document.getElementById('screen-join'),
-  waiting: document.getElementById('screen-waiting'),
-  question: document.getElementById('screen-question'),
-  result: document.getElementById('screen-result'),
-  leaderboard: document.getElementById('screen-leaderboard'),
-  finished: document.getElementById('screen-finished')
-};
-
+// ─── State ────────────────────────────────────────────────────────────────────
 let currentQuestion = null;
 let currentTimeLimit = 40;
 let hasAnswered = false;
 let studentName = '';
+let studentNumber = '';
+let studentClass = '';
 let playerId = '';
 let playerToken = '';
 let myScore = 0;
@@ -20,43 +14,59 @@ let protectionArmed = false;
 let violationSent = false;
 let removed = false;
 
+// ─── Screen management ────────────────────────────────────────────────────────
+const screens = {
+  join:        document.getElementById('screen-join'),
+  waiting:     document.getElementById('screen-waiting'),
+  question:    document.getElementById('screen-question'),
+  result:      document.getElementById('screen-result'),
+  leaderboard: document.getElementById('screen-leaderboard'),
+  finished:    document.getElementById('screen-finished')
+};
+
 function showScreen(name) {
-  Object.values(screens).forEach((screen) => screen.classList.remove('active'));
-  const target = screens[name] || screens.join;
-  target.classList.add('active');
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  (screens[name] || screens.join).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function setText(id, value) {
-  const element = document.getElementById(id);
-  if (element) element.textContent = value;
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
 }
 
 function formatTime(totalSeconds) {
-  const seconds = Math.max(0, Number(totalSeconds) || 0);
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return `${minutes}:${String(rest).padStart(2, '0')}`;
+  const s = Math.max(0, Number(totalSeconds) || 0);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function formatScore(raw) {
+  const n = Math.round((Number(raw) || 0) * 100) / 100;
+  return n.toFixed(2);
 }
 
 function updateScore(score) {
-  myScore = Number(score) || 0;
-  setText('score-value', myScore);
-  setText('result-score', myScore);
-  setText('final-score', myScore);
-  setText('removed-score', myScore);
+  myScore = Math.round((Number(score) || 0) * 100) / 100;
+  const display = `${formatScore(myScore)} / 15`;
+  setText('score-value', display);
+  setText('result-score', display);
+  setText('removed-score', `${formatScore(myScore)} / 15`);
 }
 
+// ─── Render question ──────────────────────────────────────────────────────────
 function renderQuestion(question) {
   currentQuestion = question;
   currentTimeLimit = question.timeLimit;
   hasAnswered = false;
 
-  setText('question-number', `Question ${question.number} of ${question.total}`);
+  setText('question-number', `Q${question.number} / ${question.total}`);
   setText('question-section', question.section);
-  setText('question-points', `${question.points} points`);
   setText('question-prompt', question.prompt);
+
   document.getElementById('answer-status').classList.add('hidden');
 
+  // Passage
   const passage = document.getElementById('question-passage');
   if (question.passage) {
     passage.textContent = question.passage;
@@ -66,70 +76,74 @@ function renderQuestion(question) {
     passage.classList.add('hidden');
   }
 
+  // Emotion image
   const imageFrame = document.getElementById('question-image-frame');
   const image = document.getElementById('question-image');
   if (question.image) {
     image.src = question.image;
-    image.alt = question.imageAlt || 'Question image';
+    image.alt = question.imageAlt || '';
     imageFrame.classList.remove('hidden');
   } else {
     image.removeAttribute('src');
-    image.alt = '';
     imageFrame.classList.add('hidden');
   }
 
-  const options = document.getElementById('question-options');
-  options.innerHTML = '';
-  question.options.forEach((option, index) => {
-    const button = document.createElement('button');
-    button.className = 'option';
-    button.type = 'button';
+  // Options (already shuffled by server)
+  const optionsEl = document.getElementById('question-options');
+  optionsEl.innerHTML = '';
+  question.options.forEach((optionText, index) => {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.type = 'button';
 
     const letter = document.createElement('span');
     letter.className = 'option-letter';
     letter.textContent = String.fromCharCode(65 + index);
 
     const label = document.createElement('span');
-    label.textContent = option;
+    label.textContent = optionText;
 
-    button.append(letter, label);
-    button.addEventListener('click', () => submitAnswer(index, button));
-    options.appendChild(button);
+    btn.append(letter, label);
+    btn.addEventListener('click', () => submitAnswer(index, btn));
+    optionsEl.appendChild(btn);
   });
 
   updateTimer(question.timeLimit);
   showScreen('question');
 }
 
+// ─── Timer ────────────────────────────────────────────────────────────────────
 function updateTimer(seconds) {
   const timerNumber = document.getElementById('timer-number');
   const timerFill = document.getElementById('timer-fill');
-  const safeSeconds = Math.max(0, Number(seconds) || 0);
-  const percent = currentTimeLimit ? (safeSeconds / currentTimeLimit) * 100 : 0;
+  const safe = Math.max(0, Number(seconds) || 0);
+  const pct = currentTimeLimit ? (safe / currentTimeLimit) * 100 : 0;
 
-  timerNumber.textContent = formatTime(safeSeconds);
-  timerFill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+  timerNumber.textContent = formatTime(safe);
+  timerFill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
 
   timerNumber.className = 'timer-number';
   timerFill.className = 'timer-fill';
-  if (safeSeconds <= 5) {
+
+  if (safe <= 5) {
     timerNumber.classList.add('danger');
     timerFill.classList.add('danger');
-  } else if (safeSeconds <= 10) {
+  } else if (safe <= 10) {
     timerNumber.classList.add('warning');
     timerFill.classList.add('warning');
   }
 }
 
-function submitAnswer(choiceIndex, button) {
+// ─── Submit answer ────────────────────────────────────────────────────────────
+function submitAnswer(choiceIndex, btn) {
   if (hasAnswered || !currentQuestion || removed) return;
   hasAnswered = true;
 
-  document.querySelectorAll('#question-options .option').forEach((option) => {
-    option.disabled = true;
-    option.classList.remove('selected');
+  document.querySelectorAll('#question-options .option').forEach(opt => {
+    opt.disabled = true;
+    opt.classList.remove('selected');
   });
-  button.classList.add('selected');
+  btn.classList.add('selected');
   document.getElementById('answer-status').classList.remove('hidden');
 
   socket.emit('student:answer', {
@@ -138,18 +152,17 @@ function submitAnswer(choiceIndex, button) {
   });
 }
 
-function makeEmpty(text) {
-  const node = document.createElement('p');
-  node.className = 'muted';
-  node.textContent = text;
-  return node;
-}
-
+// ─── Leaderboard render ───────────────────────────────────────────────────────
 function renderLeaderboard(containerId, leaderboard) {
   const container = document.getElementById(containerId);
   container.innerHTML = '';
-  if (!leaderboard.length) {
-    container.appendChild(makeEmpty('No scores yet.'));
+
+  if (!leaderboard || !leaderboard.length) {
+    const p = document.createElement('p');
+    p.className = 'muted';
+    p.style.padding = '12px 0';
+    p.textContent = 'No scores yet.';
+    container.appendChild(p);
     return;
   }
 
@@ -157,30 +170,33 @@ function renderLeaderboard(containerId, leaderboard) {
     if (player.id === playerId) updateScore(player.score);
 
     const row = document.createElement('div');
-    row.className = `leaderboard-row ${player.status === 'active' ? '' : 'removed'}`;
+    row.className = `leaderboard-row${player.status !== 'active' ? ' removed' : ''}`;
 
-    const rank = document.createElement('div');
-    rank.className = 'avatar';
-    rank.textContent = String(index + 1);
+    const rankEl = document.createElement('div');
+    rankEl.className = `avatar rank rank-${index + 1}`;
+    rankEl.textContent = String(index + 1);
 
     const nameWrap = document.createElement('div');
-    const name = document.createElement('div');
-    name.className = 'leader-name';
-    name.textContent = player.id === playerId ? `${player.name} (you)` : player.name;
+    const nameEl = document.createElement('div');
+    nameEl.className = 'leader-name';
+    nameEl.textContent = player.id === playerId ? `${player.name} (you)` : player.name;
     const detail = document.createElement('span');
     detail.className = 'small-text';
-    detail.textContent = player.status === 'active' ? 'Active' : 'Removed';
-    nameWrap.append(name, detail);
+    detail.textContent = player.studentClass
+      ? `${player.studentClass} · ${player.status === 'active' ? 'Active' : 'Removed'}`
+      : (player.status === 'active' ? 'Active' : 'Removed');
+    nameWrap.append(nameEl, detail);
 
-    const score = document.createElement('span');
-    score.className = player.status === 'active' ? 'score-pill' : 'status-pill removed';
-    score.textContent = `${player.score} pts`;
+    const scoreEl = document.createElement('span');
+    scoreEl.className = player.status === 'active' ? 'score-pill' : 'status-pill removed';
+    scoreEl.textContent = `${formatScore(player.score)} / 15`;
 
-    row.append(rank, nameWrap, score);
+    row.append(rankEl, nameWrap, scoreEl);
     container.appendChild(row);
   });
 }
 
+// ─── Removed overlay ──────────────────────────────────────────────────────────
 function showRemoved(reason, score) {
   removed = true;
   protectionArmed = false;
@@ -190,22 +206,14 @@ function showRemoved(reason, score) {
   document.getElementById('removed-overlay').classList.add('active');
 }
 
+// ─── Violation ────────────────────────────────────────────────────────────────
 function sendViolation(reason, type) {
   if (!protectionArmed || removed || violationSent) return;
   violationSent = true;
 
-  const payload = {
-    playerId,
-    token: playerToken,
-    reason,
-    type
-  };
+  const payload = { playerId, token: playerToken, reason, type };
 
-  try {
-    socket.emit('student:violation', payload);
-  } catch (error) {
-    // The beacon below is the fallback for closing or crashing tabs.
-  }
+  try { socket.emit('student:violation', payload); } catch (_) {}
 
   try {
     const body = JSON.stringify(payload);
@@ -219,9 +227,7 @@ function sendViolation(reason, type) {
         keepalive: true
       }).catch(() => {});
     }
-  } catch (error) {
-    // Nothing else to do if the page is already going away.
-  }
+  } catch (_) {}
 
   showRemoved(reason, myScore);
   setTimeout(() => socket.disconnect(), 250);
@@ -232,30 +238,82 @@ function armProtection() {
   document.body.classList.add('protected');
 }
 
-document.getElementById('join-form').addEventListener('submit', (event) => {
-  event.preventDefault();
-  const name = document.getElementById('student-name').value.trim();
-  if (name.length < 2) {
-    setText('join-error', 'Please enter your full name.');
+// ─── Registration form ────────────────────────────────────────────────────────
+const joinForm = document.getElementById('join-form');
+const joinBtn  = document.getElementById('join-btn');
+
+function showError(msg) {
+  const box = document.getElementById('join-error');
+  box.textContent = msg;
+  document.getElementById('student-name').classList.toggle('error', msg.includes('name'));
+  document.getElementById('student-number').classList.toggle('error', msg.includes('number'));
+  document.getElementById('student-class').classList.toggle('error', msg.includes('class'));
+}
+
+function clearError() {
+  const box = document.getElementById('join-error');
+  box.textContent = '';
+  ['student-name', 'student-number', 'student-class'].forEach(id => {
+    document.getElementById(id).classList.remove('error');
+  });
+}
+
+// Client-side English-only check (mirrors server)
+function isEnglishOnly(str) {
+  return /^[a-zA-Z\s\-'\.]+$/.test(str);
+}
+
+joinForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  clearError();
+
+  const name   = document.getElementById('student-name').value.trim();
+  const number = document.getElementById('student-number').value.trim();
+  const cls    = document.getElementById('student-class').value;
+
+  if (name.length < 2 || name.split(/\s+/).length < 2) {
+    showError('Please enter your full first and last name.');
     return;
   }
-  setText('join-error', '');
-  socket.emit('student:join', { name });
+  if (!isEnglishOnly(name)) {
+    showError('Please write your name using English letters only (no Arabic or other scripts).');
+    return;
+  }
+  if (!number) {
+    showError('Please enter your student number.');
+    return;
+  }
+  if (!cls) {
+    showError('Please select your class.');
+    return;
+  }
+
+  joinBtn.disabled = true;
+  joinBtn.textContent = 'Joining…';
+  socket.emit('student:join', { name, number, studentClass: cls });
 });
 
+// ─── Socket events ────────────────────────────────────────────────────────────
 socket.on('student:joinRejected', ({ message }) => {
-  setText('join-error', message || 'Could not join the quiz.');
+  joinBtn.disabled = false;
+  joinBtn.textContent = 'Join the Quiz';
+  showError(message || 'Could not join. Please try again.');
 });
 
-socket.on('student:joined', ({ id, token, name }) => {
-  playerId = id;
-  playerToken = token;
-  studentName = name;
+socket.on('student:joined', ({ id, token, name, number, studentClass: cls, totalQuestions }) => {
+  playerId     = id;
+  playerToken  = token;
+  studentName  = name;
+  studentNumber = number;
+  studentClass  = cls;
+
   updateScore(0);
-  setText('student-subtitle', name);
-  setText('waiting-name', `${name}, wait for the teacher to start.`);
+
+  // Show name persistently
   setText('score-name', name);
   setText('result-name', name);
+  setText('waiting-name', name);
+
   showScreen('waiting');
   armProtection();
 });
@@ -283,15 +341,16 @@ socket.on('game:results', (data) => {
   const strip = document.getElementById('result-strip');
 
   if (result) updateScore(result.score);
+
   if (result?.correct) {
     strip.className = 'result-strip correct';
-    strip.textContent = `Correct. +${result.points} points`;
+    strip.textContent = `✓ Correct! +${formatScore(result.points)} pts`;
   } else if (result?.noAnswer) {
     strip.className = 'result-strip wrong';
-    strip.textContent = 'No answer submitted.';
+    strip.textContent = '✗ No answer submitted.';
   } else {
     strip.className = 'result-strip wrong';
-    strip.textContent = 'Incorrect.';
+    strip.textContent = '✗ Incorrect.';
   }
 
   setText('correct-answer', data.correctAnswer);
@@ -306,14 +365,28 @@ socket.on('game:leaderboard', ({ leaderboard }) => {
 
 socket.on('game:finished', ({ leaderboard }) => {
   if (removed) return;
+
+  // Find the student's own entry for the summary
+  const me = leaderboard.find(p => p.id === playerId);
+  if (me) updateScore(me.score);
+
+  // Correct answers count
+  const correctCount = leaderboard.find(p => p.id === playerId);
+  setText('final-score', formatScore(myScore));
+
+  // Count correct from leaderboard (we don't have it directly, but score is reliable)
+  // Estimate: score / 0.625 ≈ correct answers
+  const estimatedCorrect = Math.round(myScore / (15 / 24));
+  setText('final-correct', `${estimatedCorrect} correct answers out of 24`);
+
   renderLeaderboard('final-leaderboard', leaderboard || []);
-  setText('final-score', myScore);
   showScreen('finished');
 });
 
 socket.on('game:reset', () => {
   if (removed) return;
   updateScore(0);
+  violationSent = false;
   showScreen(studentName ? 'waiting' : 'join');
 });
 
@@ -321,6 +394,7 @@ socket.on('student:removed', ({ reason, score }) => {
   showRemoved(reason, score);
 });
 
+// ─── Anti-cheat ───────────────────────────────────────────────────────────────
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) sendViolation('You left the quiz page.', 'visibility');
 });
@@ -337,46 +411,38 @@ window.addEventListener('beforeunload', () => {
   sendViolation('You left the quiz page.', 'beforeunload');
 });
 
-document.addEventListener('keydown', (event) => {
-  const key = event.key.toLowerCase();
-  const screenshotShortcut = event.key === 'PrintScreen'
-    || (event.metaKey && event.shiftKey && ['3', '4', '5'].includes(event.key))
-    || (event.ctrlKey && event.shiftKey && ['s', 'p'].includes(key));
+document.addEventListener('keydown', (e) => {
+  const key = e.key.toLowerCase();
+  const isScreenshot = e.key === 'PrintScreen'
+    || (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key))
+    || (e.ctrlKey && e.shiftKey && ['s', 'p'].includes(key));
 
-  const blockedShortcut = screenshotShortcut
-    || event.key === 'F12'
-    || (event.ctrlKey && event.shiftKey && ['i', 'j', 'c'].includes(key))
-    || (event.metaKey && event.altKey && ['i', 'j', 'c'].includes(key))
-    || ((event.ctrlKey || event.metaKey) && ['u', 's', 'p', 'a', 'c'].includes(key));
+  const isBlocked = isScreenshot
+    || e.key === 'F12'
+    || (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(key))
+    || (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(key))
+    || ((e.ctrlKey || e.metaKey) && ['u', 's', 'p', 'a', 'c'].includes(key));
 
-  if (blockedShortcut) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  if (screenshotShortcut) {
-    sendViolation('Screenshot attempt detected.', 'screenshot');
-  }
+  if (isBlocked) { e.preventDefault(); e.stopPropagation(); }
+  if (isScreenshot) sendViolation('Screenshot attempt detected.', 'screenshot');
 });
 
-document.addEventListener('keyup', (event) => {
-  if (event.key === 'PrintScreen') {
-    sendViolation('Screenshot attempt detected.', 'screenshot');
-  }
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'PrintScreen') sendViolation('Screenshot attempt detected.', 'screenshot');
 });
 
-document.addEventListener('contextmenu', (event) => {
-  if (protectionArmed) event.preventDefault();
+document.addEventListener('contextmenu', (e) => {
+  if (protectionArmed) e.preventDefault();
 });
 
-document.addEventListener('copy', (event) => {
-  if (protectionArmed) event.preventDefault();
+document.addEventListener('copy', (e) => {
+  if (protectionArmed) e.preventDefault();
 });
 
-if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
-  const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
+if (navigator.mediaDevices?.getDisplayMedia) {
+  const orig = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
   navigator.mediaDevices.getDisplayMedia = (...args) => {
     sendViolation('Screen recording attempt detected.', 'screen-capture');
-    return originalGetDisplayMedia(...args);
+    return orig(...args);
   };
 }

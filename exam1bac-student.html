@@ -3,100 +3,165 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student - 1st Bac Exam Live</title>
+  <title>Student — 1st Bac Exam</title>
   <link rel="stylesheet" href="/exam1bac.css">
 </head>
 <body>
   <main class="app-shell student">
-    <header class="topbar">
-      <div class="brand">
-        <h1>1st Bac Exam Live</h1>
-        <p id="student-subtitle">Student page</p>
-      </div>
-    </header>
 
-    <section class="screen active join-box" id="screen-join">
-      <div class="panel">
-        <h2 class="panel-title">Join the quiz</h2>
-        <p class="muted">Enter your name exactly as your teacher should see it.</p>
-        <form class="join-form" id="join-form">
-          <input class="name-input" id="student-name" type="text" maxlength="40" autocomplete="name" placeholder="Full name">
-          <button class="btn primary" type="submit">Join</button>
-          <div class="error-text" id="join-error"></div>
+    <!-- ── Registration ─────────────────────────────────────────────────── -->
+    <section class="screen active join-shell" id="screen-join">
+      <div class="join-card">
+        <div class="join-logo">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <h2>1st Bac Exam Live</h2>
+        <p class="subtitle">Enter your information to join the quiz session.</p>
+
+        <form id="join-form" autocomplete="off">
+          <div class="form-group">
+            <label class="form-label" for="student-name">Full Name</label>
+            <input class="form-input" id="student-name" type="text" maxlength="60"
+              placeholder="e.g. Fatima Zahra El Amrani" autocomplete="off" spellcheck="false">
+            <span class="form-hint">First and last name — English letters only, no Arabic.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="student-number">Student Number</label>
+            <input class="form-input" id="student-number" type="text" maxlength="20"
+              placeholder="e.g. 15" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="student-class">Class</label>
+            <select class="form-select" id="student-class">
+              <option value="">— Select your class —</option>
+              <option value="1BACSH2">1BACSH2</option>
+              <option value="1BACSE3">1BACSE3</option>
+              <option value="1BACSE4">1BACSE4</option>
+              <option value="TCSF3">TCSF3</option>
+              <option value="TCSF4">TCSF4</option>
+              <option value="TCSF5">TCSF5</option>
+            </select>
+          </div>
+
+          <div class="error-box" id="join-error" role="alert"></div>
+
+          <button class="join-submit" type="submit" id="join-btn">Join the Quiz</button>
         </form>
-        <p class="small-text">Leaving the page or attempting a screenshot removes you from the quiz with your score so far.</p>
+
+        <div class="join-warning">
+          ⚠️ Once joined, do not leave this page or switch to another app — doing so will remove you from the quiz.
+        </div>
       </div>
     </section>
 
+    <!-- ── Waiting ───────────────────────────────────────────────────────── -->
     <section class="screen" id="screen-waiting">
-      <div class="panel">
-        <h2 class="panel-title">You are in</h2>
-        <p class="muted" id="waiting-name">Waiting for the teacher to start.</p>
+      <div class="panel waiting-card">
+        <div class="waiting-spinner"></div>
+        <h2>You're in!</h2>
+        <div class="name-badge" id="waiting-name-badge">
+          <span>👤</span>
+          <span id="waiting-name">—</span>
+        </div>
+        <p class="muted" style="margin-top:10px; font-size:0.92rem;">
+          Waiting for the teacher to start the quiz…
+        </p>
       </div>
     </section>
 
+    <!-- ── Question ──────────────────────────────────────────────────────── -->
     <section class="screen" id="screen-question">
       <div class="score-bar">
-        <span id="score-name">Student</span>
-        <strong>Score: <span id="score-value">0</span></strong>
+        <span class="score-bar-name" id="score-name">Student</span>
+        <span class="score-bar-value" id="score-value">0.00 / 15</span>
       </div>
+
       <div class="panel question-card">
         <div class="question-head">
           <div class="question-meta">
-            <span class="tag" id="question-number">Question 1 of 24</span>
-            <span class="tag" id="question-section">Section</span>
-            <span class="tag" id="question-points">10 points</span>
+            <span class="tag" id="question-number">Q1 / 24</span>
+            <span class="tag blue" id="question-section">Section</span>
           </div>
           <div class="timer-wrap">
             <div class="timer-number" id="timer-number">0:40</div>
-            <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+            <div class="timer-bar-wrap">
+              <div class="timer-fill" id="timer-fill"></div>
+            </div>
           </div>
         </div>
 
         <div class="passage hidden" id="question-passage"></div>
+
         <div class="emotion-image-frame hidden" id="question-image-frame">
           <img id="question-image" alt="">
         </div>
+
         <h2 class="prompt" id="question-prompt"></h2>
+
         <div class="options" id="question-options"></div>
-        <div class="answer-status hidden" id="answer-status">Answer submitted. Wait for the teacher.</div>
+
+        <div class="answer-status hidden" id="answer-status">
+          Answer submitted — wait for the teacher to move on.
+        </div>
       </div>
     </section>
 
+    <!-- ── Per-question result ───────────────────────────────────────────── -->
     <section class="screen" id="screen-result">
       <div class="score-bar">
-        <span id="result-name">Student</span>
-        <strong>Score: <span id="result-score">0</span></strong>
+        <span class="score-bar-name" id="result-name">Student</span>
+        <span class="score-bar-value" id="result-score">0.00 / 15</span>
       </div>
-      <div class="panel">
-        <div class="result-strip" id="result-strip"></div>
-        <p class="muted">Correct answer: <strong id="correct-answer"></strong></p>
-        <p class="muted">Waiting for the next question.</p>
+      <div class="panel" style="display:grid;gap:14px;">
+        <div class="result-strip" id="result-strip">—</div>
+        <p class="muted" style="font-size:0.9rem;">
+          Correct answer: <strong id="correct-answer">—</strong>
+        </p>
+        <p class="muted" style="font-size:0.88rem;">Waiting for the next question…</p>
       </div>
     </section>
 
+    <!-- ── Leaderboard ───────────────────────────────────────────────────── -->
     <section class="screen" id="screen-leaderboard">
       <div class="panel">
-        <h2 class="panel-title">Leaderboard</h2>
+        <h2 class="panel-title">Standings</h2>
         <div class="leaderboard-list" id="leaderboard-list"></div>
-        <p class="muted">Waiting for the teacher.</p>
+        <p class="muted" style="margin-top:12px;font-size:0.88rem;">Waiting for the teacher…</p>
       </div>
     </section>
 
+    <!-- ── Finished ──────────────────────────────────────────────────────── -->
     <section class="screen" id="screen-finished">
-      <div class="panel">
-        <h2 class="panel-title">Quiz complete</h2>
-        <p>Your final score: <strong id="final-score">0</strong></p>
+      <div class="panel" style="display:grid;gap:18px;">
+        <h2 class="panel-title" style="font-size:1.2rem;">Quiz Complete 🎉</h2>
+
+        <div class="final-score-block" id="final-score-block">
+          <div class="score-label">Your Final Score</div>
+          <div>
+            <span class="score-number" id="final-score">0.00</span>
+            <span class="score-max"> / 15</span>
+          </div>
+          <div style="margin-top:6px;font-size:0.85rem;color:var(--teal-dark);font-weight:600;" id="final-correct"></div>
+        </div>
+
         <div class="leaderboard-list" id="final-leaderboard"></div>
       </div>
     </section>
+
   </main>
 
+  <!-- ── Removed overlay ──────────────────────────────────────────────────── -->
   <div class="removed-overlay" id="removed-overlay">
     <div class="removed-box">
-      <h2>You have been removed</h2>
-      <p id="removed-reason">You left the quiz.</p>
-      <p>Your score so far: <strong id="removed-score">0</strong></p>
+      <div class="removed-icon">🚫</div>
+      <h2>Removed from Quiz</h2>
+      <p id="removed-reason">You left the quiz page.</p>
+      <p style="margin-top:12px;">Score at time of removal:</p>
+      <div class="removed-score" id="removed-score">0.00 / 15</div>
     </div>
   </div>
 
