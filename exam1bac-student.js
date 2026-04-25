@@ -287,33 +287,39 @@ joinForm.addEventListener('submit', (e) => {
     return;
   }
 
-  joinBtn.disabled = true;
-  joinBtn.textContent = 'Joining…';
+  // Switch to waiting screen immediately — no need to stare at the form
+  setText('waiting-name', name);
+  setText('waiting-detail', `${cls} · #${number}`);
+  setText('waiting-status', 'Your registration is being confirmed…');
+  showScreen('waiting');
+
   socket.emit('student:join', { name, number, studentClass: cls });
 });
 
 // ─── Socket events ────────────────────────────────────────────────────────────
 socket.on('student:joinRejected', ({ message }) => {
-  joinBtn.disabled = false;
-  joinBtn.textContent = 'Join the Quiz';
+  // Bring the form back and show the error
+  showScreen('join');
   showError(message || 'Could not join. Please try again.');
 });
 
 socket.on('student:joined', ({ id, token, name, number, studentClass: cls, totalQuestions }) => {
-  playerId     = id;
-  playerToken  = token;
-  studentName  = name;
+  playerId      = id;
+  playerToken   = token;
+  studentName   = name;
   studentNumber = number;
   studentClass  = cls;
 
   updateScore(0);
 
-  // Show name persistently
+  // Keep name visible everywhere
   setText('score-name', name);
   setText('result-name', name);
   setText('waiting-name', name);
+  setText('waiting-detail', `${cls} · #${number}`);
+  setText('waiting-status', 'Waiting for the teacher to start the quiz…');
 
-  showScreen('waiting');
+  // Stay on the waiting screen (already showing), arm protection
   armProtection();
 });
 
