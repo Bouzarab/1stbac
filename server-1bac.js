@@ -391,7 +391,7 @@ function publicPlayer(player) {
 function getTeacherState() {
   const qi = gameState.currentQuestionIndex;
   const qs = gameState.shuffledQuestions;
-  const currentQuestion = qi >= 0 && qs ? teacherQuestion(qs[qi]) : null;
+  const currentQuestion = qi >= 0 && qs && qi < qs.length ? teacherQuestion(qs[qi]) : null;
   const players = Object.fromEntries(
     Object.entries(gameState.players).map(([id, p]) => [id, publicPlayer(p)])
   );
@@ -651,50 +651,56 @@ function resetQuiz() {
 io.on('connection', (socket) => {
   console.log(`Connected: ${socket.id}`);
 
+  function safe(fn) {
+    return (...args) => {
+      try { fn(...args); } catch (err) { console.error(`Socket error [${socket.id}]:`, err); }
+    };
+  }
+
   // ── Teacher events ──
-  socket.on('teacher:join', () => {
+  socket.on('teacher:join', safe(() => {
     socket.join('teachers');
     socket.emit('teacher:state', getTeacherState());
-  });
+  }));
 
-  socket.on('teacher:start', () => {
+  socket.on('teacher:start', safe(() => {
     if (gameState.phase !== 'lobby') return;
     if (getActivePlayers().length < 1) return;
     startNextQuestion();
-  });
+  }));
 
   // "Show Results Now" = end the quiz immediately and show all final results
-  socket.on('teacher:showResults', () => {
+  socket.on('teacher:showResults', safe(() => {
     finishQuiz();
-  });
+  }));
 
-  socket.on('teacher:moveNext', () => {
+  socket.on('teacher:moveNext', safe(() => {
     if (gameState.phase === 'question') {
       finishCurrentQuestion(false);
     }
     startNextQuestion();
-  });
+  }));
 
-  socket.on('teacher:showLeaderboard', () => {
+  socket.on('teacher:showLeaderboard', safe(() => {
     gameState.phase = 'leaderboard';
     io.emit('game:leaderboard', { leaderboard: getLeaderboard() });
     emitTeacherState();
-  });
+  }));
 
-  socket.on('teacher:endQuiz', () => {
+  socket.on('teacher:endQuiz', safe(() => {
     finishQuiz();
-  });
+  }));
 
-  socket.on('teacher:restart', () => {
+  socket.on('teacher:restart', safe(() => {
     resetQuiz();
-  });
+  }));
 
-  socket.on('teacher:kickPlayer', ({ playerId }) => {
+  socket.on('teacher:kickPlayer', safe(({ playerId }) => {
     markPlayerRemoved(playerId, 'Removed by teacher', 'teacher', null, true);
-  });
+  }));
 
   // ── Student events ──
-  socket.on('student:join', ({ name, number, studentClass }) => {
+  socket.on('student:join', safe(({ name, number, studentClass }) => {
     const cleanName = String(name || '').trim().replace(/\s+/g, ' ').slice(0, 60);
     const cleanNumber = String(number || '').trim().slice(0, 20);
     const cleanClass = String(studentClass || '').trim();
@@ -769,9 +775,9 @@ io.on('connection', (socket) => {
     });
     io.emit('game:playerCount', { count: getActivePlayers().length });
     emitTeacherState();
-  });
+  }));
 
-  socket.on('student:answer', ({ questionId, choiceIndex }) => {
+  socket.on('student:answer', safe(({ questionId, choiceIndex }) => {
     const player = gameState.players[socket.id];
     const qs = gameState.shuffledQuestions;
     const question = qs ? qs[gameState.currentQuestionIndex] : null;
@@ -790,17 +796,21 @@ io.on('connection', (socket) => {
       total: getActivePlayers().length
     });
     emitTeacherState();
-  });
+  }));
 
-  socket.on('student:violation', ({ playerId, token, reason, type }) => {
+  socket.on('student:violation', safe(({ playerId, token, reason, type }) => {
     if (playerId && playerId !== socket.id) return;
     markPlayerRemoved(socket.id, reason || 'Left the quiz', type || 'rule', token, true);
-  });
+  }));
 
   socket.on('disconnect', () => {
-    const player = gameState.players[socket.id];
-    if (player && player.status === 'active' && gameState.phase !== 'finished') {
-      markPlayerRemoved(socket.id, 'Left the quiz or lost connection', 'disconnect', null, false);
+    try {
+      const player = gameState.players[socket.id];
+      if (player && player.status === 'active' && gameState.phase !== 'finished') {
+        markPlayerRemoved(socket.id, 'Left the quiz or lost connection', 'disconnect', null, false);
+      }
+    } catch (err) {
+      console.error('disconnect error:', err);
     }
     console.log(`Disconnected: ${socket.id}`);
   });

@@ -167,6 +167,15 @@ function renderQuestion(question) {
   if (!question) return;
   currentTimeLimit = question.timeLimit;
 
+  // Hide "Next question" on the last question — there is no next
+  const moveNextBtn = document.getElementById('move-next-btn');
+  const resultsNextBtn = document.getElementById('results-next-btn');
+  const leaderboardNextBtn = document.getElementById('leaderboard-next-btn');
+  const isLast = question.number >= question.total;
+  [moveNextBtn, resultsNextBtn, leaderboardNextBtn].forEach(btn => {
+    if (btn) btn.style.display = isLast ? 'none' : '';
+  });
+
   setText('question-number', `Q${question.number} / ${question.total}`);
   setText('question-section', question.section);
   setText('question-prompt', question.prompt);
